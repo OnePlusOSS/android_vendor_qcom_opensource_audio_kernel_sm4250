@@ -181,6 +181,14 @@ ifdef CONFIG_SND_SOC_WCD_IRQ
 	CORE_OBJS += wcd-irq.o
 endif
 
+ifdef CONFIG_SND_SOC_AW87529
+	AW87529_OBJS += aw87529.o
+endif
+
+ifdef CONFIG_SND_SOC_AW87359
+	AW87359_OBJS += aw87359.o
+endif
+
 LINUX_INC +=	-Iinclude/linux
 
 INCS +=		$(COMMON_INC) \
@@ -254,6 +262,12 @@ wcd_cpe_dlkm-y := $(WCD_CPE_OBJS)
 
 obj-$(CONFIG_SND_SOC_WCD_SPI) += wcd_spi_dlkm.o
 wcd_spi_dlkm-y := $(SPI_OBJS)
+
+obj-$(CONFIG_SND_SOC_AW87529) += aw87529_dlkm.o
+aw87529_dlkm-y := $(AW87529_OBJS)
+
+obj-$(CONFIG_SND_SOC_AW87359) += aw87359_dlkm.o
+aw87359_dlkm-y := $(AW87359_OBJS)
 
 obj-$(CONFIG_SND_SOC_WCD_MBHC) += mbhc_dlkm.o
 mbhc_dlkm-y := $(MBHC_OBJS)

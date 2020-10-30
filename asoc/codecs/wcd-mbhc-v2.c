@@ -737,8 +737,9 @@ void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 		    mbhc->mbhc_cb->mbhc_micb_ramp_control)
 			mbhc->mbhc_cb->mbhc_micb_ramp_control(component, false);
 
-		pr_debug("%s: Reporting insertion %d(%x)\n", __func__,
+		pr_err("%s: Reporting insertion jack_type=%d(hph_status=%x) [1:headphone 3:headset 4:lineout]\n", __func__,
 			 jack_type, mbhc->hph_status);
+
 		wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack,
 				    (mbhc->hph_status | SND_JACK_MECHANICAL),
 				    WCD_MBHC_JACK_MASK);

@@ -388,6 +388,7 @@ int q6audio_get_port_index(u16 port_id)
 	default: return -EINVAL;
 	}
 }
+EXPORT_SYMBOL(q6audio_get_port_index);
 
 int q6audio_get_port_id(u16 port_id)
 {

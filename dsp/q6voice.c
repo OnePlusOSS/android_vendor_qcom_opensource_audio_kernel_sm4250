@@ -7283,6 +7283,63 @@ fail:
 }
 EXPORT_SYMBOL(voc_resume_voice_call);
 
+static int voice_send_ssr_cnt(struct voice_data *v)
+{
+	struct cvp_ssr_count_cmd ssr_cmd;
+	int ret = 0;
+	void *apr_cvp;
+	u16 cvp_handle;
+
+	if (v == NULL) {
+		pr_err("%s: v is NULL\n", __func__);
+		return -EINVAL;
+	}
+	apr_cvp = common.apr_q6_cvp;
+
+	if (!apr_cvp) {
+		pr_err("%s: apr_cvp is NULL.\n", __func__);
+		return -EINVAL;
+	}
+	cvp_handle = voice_get_cvp_handle(v);
+
+	ssr_cmd.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+						APR_HDR_LEN(APR_HDR_SIZE),
+						APR_PKT_VER);
+	ssr_cmd.hdr.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,
+				sizeof(ssr_cmd) - APR_HDR_SIZE);
+	ssr_cmd.hdr.src_port =
+				voice_get_idx_for_session(v->session_id);
+	ssr_cmd.hdr.dest_port = cvp_handle;
+	ssr_cmd.hdr.token = 0;
+	ssr_cmd.hdr.opcode = VSS_IVOCPROC_CMD_SET_VOC_SSR_CNT;
+	ssr_cmd.ssr_cnt_t.voc_ssr_counter = common.vss_ivocproc_ssr_cnt;
+	pr_err("%s ssr_cnt = %d\n", __func__, common.vss_ivocproc_ssr_cnt);
+
+	v->cvp_state = CMD_STATUS_FAIL;
+	v->async_err = 0;
+	ret = apr_send_pkt(apr_cvp, (uint32_t *) &ssr_cmd);
+	if (ret < 0) {
+		pr_err("Fail in sending SSR CMD\n");
+		return -EINVAL;
+	}
+	ret = wait_event_timeout(v->cvp_wait,
+				 (v->cvp_state == CMD_STATUS_SUCCESS),
+				 msecs_to_jiffies(TIMEOUT_MS));
+	if (!ret) {
+		pr_err("%s: wait_event timeout\n", __func__);
+		return -EINVAL;
+	}
+	if (v->async_err > 0) {
+		pr_err("%s: DSP returned error[%s]\n",
+				__func__, adsp_err_get_err_str(
+				v->async_err));
+		ret = adsp_err_get_lnx_err_code(
+				v->async_err);
+		return ret;
+	}
+	return 0;
+}
+
 /**
  * voc_start_voice_call -
  *       command to start voice call
@@ -7318,7 +7375,7 @@ int voc_start_voice_call(uint32_t session_id)
 			pr_err("%s:  apr register failed\n", __func__);
 			goto fail;
 		}
-
+		voice_send_ssr_cnt(v);
 		if (is_cvd_version_queried()) {
 			pr_debug("%s: Returning the cached value %s\n",
 				 __func__, common.cvd_version);
@@ -8146,6 +8203,7 @@ static int32_t qdsp_cvp_callback(struct apr_client_data *data, void *priv)
 			case VSS_IVPCM_CMD_START_V2:
 			case VSS_IVPCM_CMD_STOP:
 			case VSS_IVOCPROC_CMD_TOPOLOGY_SET_DEV_CHANNELS:
+			case VSS_IVOCPROC_CMD_SET_VOC_SSR_CNT:
 			case VSS_IVOCPROC_CMD_TOPOLOGY_COMMIT:
 				v->cvp_state = CMD_STATUS_SUCCESS;
 				v->async_err = ptr[1];
@@ -8279,6 +8337,10 @@ static int32_t qdsp_cvp_callback(struct apr_client_data *data, void *priv)
 		}
 		v->cvp_state = CMD_STATUS_SUCCESS;
 		wake_up(&v->cvp_wait);
+	}
+	else if (data->opcode == VSS_IVOCPROC_EVT_VOC_SSR_TRIGGERED) {
+		common.vss_ivocproc_ssr_cnt++;
+		pr_err("%s vss_ivocproc_ssr_cnt = %d\n", __func__, common.vss_ivocproc_ssr_cnt);
 	}
 	return 0;
 }

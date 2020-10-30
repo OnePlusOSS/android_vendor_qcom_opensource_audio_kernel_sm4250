@@ -92,6 +92,9 @@ struct stream_data {
 	uint32_t stream_mute_ramp_duration_ms;
 };
 
+#define VSS_IVOCPROC_EVT_VOC_SSR_TRIGGERED   0x000133D0
+#define VSS_IVOCPROC_CMD_SET_VOC_SSR_CNT  0x000133E0
+
 /* Device information payload structure */
 struct device_data {
 	uint32_t dev_mute;
@@ -188,6 +191,15 @@ struct vss_icommon_cmd_map_memory_t {
 	 * Memory pool ID. Possible values:
 	 * 3 -- VSS_ICOMMON_MEM_TYPE_SHMEM8_4K_POOL.
 	 */
+} __packed;
+
+struct vss_ivocproc_cmd_set_voc_ssr_cnt_t {
+	uint32_t voc_ssr_counter;
+} __packed;
+
+struct cvp_ssr_count_cmd {
+	struct apr_hdr hdr;
+	struct vss_ivocproc_cmd_set_voc_ssr_cnt_t ssr_cnt_t;
 } __packed;
 
 struct vss_icommon_cmd_unmap_memory_t {
@@ -1952,6 +1964,7 @@ struct voice_data {
 
 struct common_data {
 	/* these default values are for all devices */
+	uint32_t vss_ivocproc_ssr_cnt;
 	uint32_t default_mute_val;
 	uint32_t default_sample_val;
 	uint32_t default_vol_step_val;
