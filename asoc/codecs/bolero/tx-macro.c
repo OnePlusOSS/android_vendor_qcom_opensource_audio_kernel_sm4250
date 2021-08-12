@@ -501,6 +501,7 @@ static void tx_macro_tx_hpf_corner_freq_callback(struct work_struct *work)
 		snd_soc_component_update_bits(component, hpf_gate_reg,
 						0x03, 0x02);
 		/* Add delay between toggle hpf gate based on sample rate */
+		usleep_range(30, 35);
 		switch(tx_priv->amic_sample_rate) {
 		case 8000:
 			usleep_range(125, 130);

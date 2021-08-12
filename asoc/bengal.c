@@ -63,7 +63,7 @@
 #define CODEC_EXT_CLK_RATE          9600000
 #define ADSP_STATE_READY_TIMEOUT_MS 3000
 #define DEV_NAME_STR_LEN            32
-#define WCD_MBHC_HS_V_MAX           1600
+#define WCD_MBHC_HS_V_MAX           1700
 #define ROULEUR_MBHC_HS_V_MAX       1700
 
 #define TDM_CHANNEL_MAX		8
@@ -566,14 +566,14 @@ static void *def_rouleur_mbhc_cal(void);
 static struct wcd_mbhc_config wcd_mbhc_cfg = {
 	.read_fw_bin = false,
 	.calibration = NULL,
-	.detect_extn_cable = true,
+	.detect_extn_cable = false,
 	.mono_stero_detection = false,
 	.swap_gnd_mic = NULL,
 	.hs_ext_micbias = true,
 	.key_code[0] = KEY_MEDIA,
-	.key_code[1] = KEY_VOICECOMMAND,
-	.key_code[2] = KEY_VOLUMEUP,
-	.key_code[3] = KEY_VOLUMEDOWN,
+	.key_code[1] = KEY_VOLUMEUP,
+	.key_code[2] = KEY_VOLUMEDOWN,
+	.key_code[3] = 0,
 	.key_code[4] = 0,
 	.key_code[5] = 0,
 	.key_code[6] = 0,
@@ -2878,6 +2878,106 @@ static int msm_bt_sample_rate_tx_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+//add for Awinic pa 87359 rcv
+extern unsigned char aw87359_audio_dspk(void);
+extern unsigned char aw87359_audio_drcv(void);
+extern unsigned char aw87359_audio_off(void);
+static int aw87359_dspk_control = 0;
+static int aw87359_drcv_control = 0;
+static const char *const ext_rcv_amp_spkmode_function[] = { "Off", "On" };
+static const char *const ext_rcv_amp_rcvmode_function[] = { "Off", "On" };
+
+static int ext_rcv_amp_spkmode_get(struct snd_kcontrol *kcontrol,
+        struct snd_ctl_elem_value *ucontrol)
+{
+        ucontrol->value.integer.value[0] = aw87359_dspk_control;
+        pr_debug("%s: aw87359_dspk_control = %d\n", __func__,
+                aw87359_dspk_control);
+        return 0;
+}
+
+static int ext_rcv_amp_spkmode_put(struct snd_kcontrol *kcontrol,
+        struct snd_ctl_elem_value *ucontrol)
+{
+        if(ucontrol->value.integer.value[0] == aw87359_dspk_control){
+                return 1;
+        }
+        aw87359_dspk_control = ucontrol->value.integer.value[0];
+        if(ucontrol->value.integer.value[0]) {
+                aw87359_audio_dspk();
+        } else {
+                aw87359_audio_off();
+        }
+        pr_debug("%s: value.integer.value = %d\n", __func__,
+                ucontrol->value.integer.value[0]);
+        return 0;
+}
+static int ext_rcv_amp_rcvmode_get(struct snd_kcontrol *kcontrol,
+        struct snd_ctl_elem_value *ucontrol)
+{
+        ucontrol->value.integer.value[0] = aw87359_drcv_control;
+        pr_debug("%s: aw87359_drcv_control = %d\n", __func__,
+                aw87359_drcv_control);
+        return 0;
+}
+
+static int ext_rcv_amp_rcvmode_put(struct snd_kcontrol *kcontrol,
+        struct snd_ctl_elem_value *ucontrol)
+{
+        if(ucontrol->value.integer.value[0] == aw87359_drcv_control){
+                return 1;
+        }
+        aw87359_drcv_control = ucontrol->value.integer.value[0];
+        if(ucontrol->value.integer.value[0]) {
+                aw87359_audio_drcv();
+        } else {
+                aw87359_audio_off();
+        }
+        pr_debug("%s: value.integer.value = %d\n", __func__,
+                ucontrol->value.integer.value[0]);
+        return 0;
+}
+//add for Awinic pa 87529 spk
+extern unsigned char aw87529_audio_kspk(void);
+extern unsigned char aw87529_audio_off(void);
+static int aw87529_kspk_control = 0;
+static const char *const ext_spk_amp_spkmode_function[] = { "Off", "On" };
+
+static int ext_spk_amp_spkmode_get(struct snd_kcontrol *kcontrol,
+                struct snd_ctl_elem_value *ucontrol)
+{
+        ucontrol->value.integer.value[0] = aw87529_kspk_control;
+        pr_debug("%s: aw87529_kspk_control = %d\n", __func__,
+                aw87529_kspk_control);
+        return 0;
+}
+
+static int ext_spk_amp_spkmode_put(struct snd_kcontrol *kcontrol,
+                struct snd_ctl_elem_value *ucontrol)
+{
+        if(ucontrol->value.integer.value[0] == aw87529_kspk_control){
+                return 1;
+        }
+        aw87529_kspk_control = ucontrol->value.integer.value[0];
+        if(ucontrol->value.integer.value[0]) {
+                aw87529_audio_kspk();
+        } else {
+                aw87529_audio_off();
+        }
+        pr_debug("%s: value.integer.value = %d\n", __func__,
+                ucontrol->value.integer.value[0]);
+        return 0;
+}
+
+//add for Awinic pa 87529 spk & 87359 rcv
+static const struct soc_enum msm_snd_enum[] = {
+        SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(ext_rcv_amp_spkmode_function),
+                        ext_rcv_amp_spkmode_function),
+        SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(ext_rcv_amp_rcvmode_function),
+                        ext_rcv_amp_rcvmode_function),
+        SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(ext_spk_amp_spkmode_function),
+                        ext_spk_amp_spkmode_function),
+};
 static const struct snd_kcontrol_new msm_int_snd_controls[] = {
 	SOC_ENUM_EXT("RX_CDC_DMA_RX_0 Channels", rx_cdc_dma_rx_0_chs,
 			cdc_dma_rx_ch_get, cdc_dma_rx_ch_put),
@@ -2923,6 +3023,13 @@ static const struct snd_kcontrol_new msm_int_snd_controls[] = {
 			cdc_dma_tx_format_get, cdc_dma_tx_format_put),
 	SOC_ENUM_EXT("VA_CDC_DMA_TX_2 Format", va_cdc_dma_tx_2_format,
 			cdc_dma_tx_format_get, cdc_dma_tx_format_put),
+        //add for Awinic pa 87529 spk & 87359 rcv
+        SOC_ENUM_EXT("Ext_Receiver_Amp_spkmode", msm_snd_enum[0],
+                        ext_rcv_amp_spkmode_get, ext_rcv_amp_spkmode_put),
+        SOC_ENUM_EXT("Ext_Receiver_Amp_rcvmode", msm_snd_enum[1],
+                        ext_rcv_amp_rcvmode_get, ext_rcv_amp_rcvmode_put),
+        SOC_ENUM_EXT("Ext_Speaker_Amp_spkmode", msm_snd_enum[2],
+                        ext_spk_amp_spkmode_get, ext_spk_amp_spkmode_put),
 	SOC_ENUM_EXT("RX_CDC_DMA_RX_0 SampleRate",
 			rx_cdc_dma_rx_0_sample_rate,
 			cdc_dma_rx_sample_rate_get,
@@ -4384,9 +4491,9 @@ static void *def_wcd_mbhc_cal(void)
 	btn_high = ((void *)&btn_cfg->_v_btn_low) +
 		(sizeof(btn_cfg->_v_btn_low[0]) * btn_cfg->num_btn);
 
-	btn_high[0] = 75;
-	btn_high[1] = 150;
-	btn_high[2] = 237;
+	btn_high[0] = 112;
+	btn_high[1] = 237;
+	btn_high[2] = 500;
 	btn_high[3] = 500;
 	btn_high[4] = 500;
 	btn_high[5] = 500;
@@ -5979,62 +6086,6 @@ static const struct of_device_id bengal_asoc_machine_of_match[]  = {
 	{},
 };
 
-static int msm_snd_card_bengal_late_probe(struct snd_soc_card *card)
-{
-	struct snd_soc_component *component;
-	struct platform_device *pdev = NULL;
-	char *data = NULL;
-	int ret = 0, i = 0;
-	void *mbhc_calibration;
-
-	for (i = 0; i < card->num_aux_devs; i++)
-	{
-		if (msm_aux_dev[i].name != NULL ) {
-			if (strstr(msm_aux_dev[i].name, "wsa"))
-				continue;
-		}
-
-		if (msm_aux_dev[i].codec_of_node) {
-			pdev = of_find_device_by_node(
-					msm_aux_dev[i].codec_of_node);
-			if (pdev) {
-				data = (char*) of_device_get_match_data(
-							&pdev->dev);
-				component = soc_find_component(
-					    msm_aux_dev[i].codec_of_node,
-					    NULL);
-			}
-		}
-	}
-
-	if (data != NULL && component != NULL) {
-		if (!strncmp(data, "wcd937x", sizeof("wcd937x"))) {
-			mbhc_calibration = def_wcd_mbhc_cal();
-			if (!mbhc_calibration)
-				goto err_mbhc_cal;
-			wcd_mbhc_cfg.calibration = mbhc_calibration;
-			ret = wcd937x_mbhc_hs_detect(component, &wcd_mbhc_cfg);
-		} else if (!strncmp( data, "rouleur", sizeof("rouleur"))) {
-			mbhc_calibration = def_rouleur_mbhc_cal();
-			if (!mbhc_calibration)
-				goto err_mbhc_cal;
-			wcd_mbhc_cfg.calibration = mbhc_calibration;
-			ret = rouleur_mbhc_hs_detect(component, &wcd_mbhc_cfg);
-		}
-	}
-
-	if (ret) {
-		dev_err(component->dev, "%s: mbhc hs detect failed, err:%d\n",
-			__func__, ret);
-		goto err_hs_detect;
-	}
-	return 0;
-
-err_hs_detect:
-	kfree(mbhc_calibration);
-err_mbhc_cal:
-	return ret;
-}
 static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 {
 	struct snd_soc_card *card = NULL;
@@ -6193,7 +6244,7 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 	if (card) {
 		card->dai_link = dailink;
 		card->num_links = total_links;
-		card->late_probe = msm_snd_card_bengal_late_probe;
+		
 	}
 
 	return card;
@@ -6204,6 +6255,7 @@ static int msm_aux_codec_init(struct snd_soc_component *component)
 	struct snd_soc_dapm_context *dapm =
 				snd_soc_component_get_dapm(component);
 	int ret = 0;
+	void *mbhc_calibration;
 	struct snd_info_entry *entry;
 	struct snd_card *card = component->card->snd_card;
 	struct msm_asoc_mach_data *pdata;
@@ -6230,7 +6282,7 @@ static int msm_aux_codec_init(struct snd_soc_component *component)
 			dev_dbg(component->dev, "%s: Cannot create codecs module entry\n",
 				 __func__);
 			ret = 0;
-			goto err;
+			goto mbhc_cfg_cal;
 		}
 		pdata->codec_root = entry;
 	}
@@ -6264,7 +6316,32 @@ static int msm_aux_codec_init(struct snd_soc_component *component)
 			}
 		}
 	}
-err:
+mbhc_cfg_cal:
+        if (data != NULL) {
+		if (!strncmp(data, "wcd937x", sizeof("wcd937x"))) {
+			mbhc_calibration = def_wcd_mbhc_cal();
+			if (!mbhc_calibration)
+				return -ENOMEM;
+			wcd_mbhc_cfg.calibration = mbhc_calibration;
+			ret = wcd937x_mbhc_hs_detect(component, &wcd_mbhc_cfg);
+		} else if (!strncmp( data, "rouleur", sizeof("rouleur"))) {
+			mbhc_calibration = def_rouleur_mbhc_cal();
+			if (!mbhc_calibration)
+				return -ENOMEM;
+			wcd_mbhc_cfg.calibration = mbhc_calibration;
+			ret = rouleur_mbhc_hs_detect(component, &wcd_mbhc_cfg);
+		}
+	}
+
+	if (ret) {
+		dev_err(component->dev, "%s: mbhc hs detect failed, err:%d\n",
+			__func__, ret);
+		goto err_hs_detect;
+	}
+	return 0;
+
+err_hs_detect:
+	kfree(mbhc_calibration);
 	return ret;
 }
 
